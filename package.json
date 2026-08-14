@@ -1,8 +1,26 @@
 {
   "name": "dsh-worktree",
-  "version": "0.0.0-development",
+  "version": "0.1.0-alpha.1",
   "description": "Durable Git worktree isolation and delivery for DeepSeek Harness subagents",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paradoxSCH/dsh-worktree.git"
+  },
+  "bugs": {
+    "url": "https://github.com/paradoxSCH/dsh-worktree/issues"
+  },
+  "homepage": "https://github.com/paradoxSCH/dsh-worktree#readme",
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "git-worktree",
+    "agent",
+    "subagent"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "packageManager": "pnpm@11.19.0",
   "engines": {
@@ -36,6 +54,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "pnpm run typecheck && pnpm run test && pnpm run build",
+    "prepack": "pnpm run build",
     "pack:check": "pnpm pack --dry-run"
   },
   "peerDependencies": {

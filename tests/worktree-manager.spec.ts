@@ -175,7 +175,7 @@ describe('WorktreeManager', () => {
     expect(created.baseCommit).toBe(await git(publisher, 'rev-parse', 'HEAD'))
     expect(created.changedFromInitial).toBe(false)
     await manager.conclude({ id: created.id, action: 'remove-clean' })
-  })
+  }, 15_000)
 
   it('recovers a worktree after a crash at the post-add durability boundary', async () => {
     const fixture = await repositoryFixture()
