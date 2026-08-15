@@ -19,4 +19,7 @@ export declare class WorktreeChangedSinceInspectionError extends WorktreeError {
     readonly worktreeId: WorktreeId;
     constructor(worktreeId: WorktreeId);
 }
+export declare class WorktreeInUseError extends WorktreeError {
+    constructor(id: string, leaseCount: number);
+}
 //# sourceMappingURL=errors.d.ts.map

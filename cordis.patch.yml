@@ -1,4 +1,13 @@
 - insert:
     - id: dsh-worktree
-      name: dsh-worktree
-
+      name: "@paradoxsch/dsh-worktree"
+    - id: dsh-worktree-subagent-tool
+      name: "@deepseek-ai/dsh-tool-subagent"
+      config:
+        provider: worktree
+        toolName: subagent_worktree
+        backgroundMode: continuable
+    - id: dsh-worktree-tools
+      name: "@paradoxsch/dsh-worktree/tools"
+    - id: dsh-worktree-commands
+      name: "@paradoxsch/dsh-worktree/commands"

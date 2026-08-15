@@ -6,6 +6,8 @@ import { startInProcessRun } from '@deepseek-ai/dsh-subagent-in-process-driver'
 import { WorktreeError } from './errors.js'
 import { LocalWorktreeManager } from './manager.js'
 import { WorktreeSubagentProvider } from './provider.js'
+import { GitHubCliPullRequestPublisher } from './forge.js'
+import { registerWorktreeWeb } from './web.js'
 import type { LifetimePolicy, SourcePolicy, WorktreeManager, WorktreeManagerOptions } from './types.js'
 
 declare module '@deepseek-ai/cordis' {
@@ -26,6 +28,7 @@ export interface Config {
   sourceRemote?: string
   sourceRef?: string
   lifetime: LifetimePolicy
+  pullRequestProvider: 'github-cli' | 'disabled'
 }
 
 function defaultDshHome(): string {
@@ -43,6 +46,7 @@ export const Config: z<Config> = z.object({
   sourceRemote: z.string(),
   sourceRef: z.string(),
   lifetime: z.union(['ephemeral', 'managed', 'permanent'] as const).default('managed'),
+  pullRequestProvider: z.union(['github-cli', 'disabled'] as const).default('github-cli'),
 })
 
 function absoluteConfigPath(label: string, value: string): string {
@@ -70,6 +74,9 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
   const options: WorktreeManagerOptions = {
     managedRoot: absoluteConfigPath('managedRoot', config.managedRoot),
     journalPath: absoluteConfigPath('journalPath', config.journalPath),
+    ...(config.pullRequestProvider === 'github-cli'
+      ? { pullRequestPublisher: new GitHubCliPullRequestPublisher() }
+      : {}),
   }
   const manager = new LocalWorktreeManager(options)
   const recovery = await manager.recover()
@@ -77,6 +84,10 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
     ctx.logger.warn(`dsh-worktree: manual recovery required for ${item.id}: ${item.reason}`)
   }
   ctx.provide('worktrees', manager)
+  ctx.inject(['webServer'], webCtx => webCtx.effect(
+    () => registerWorktreeWeb(webCtx),
+    'dsh-worktree.web',
+  ))
   ctx.effect(() => async () => manager.close(), 'dsh-worktree.close')
   ctx.subagents.registerProvider(new WorktreeSubagentProvider(
     config.providerName,
@@ -90,10 +101,12 @@ export {
   WorktreeChangedError,
   WorktreeChangedSinceInspectionError,
   WorktreeError,
+  WorktreeInUseError,
   WorktreeNotFoundError,
 } from './errors.js'
 export { LocalWorktreeManager } from './manager.js'
 export { WorktreeSubagentProvider } from './provider.js'
+export { GitHubCliPullRequestPublisher } from './forge.js'
 export type { InProcessRunStarter, WorktreeProviderPolicy } from './provider.js'
 export type {
   ConcludeWorktreeRequest,
@@ -101,13 +114,25 @@ export type {
   LifetimePolicy,
   SourcePolicy,
   WorktreeChanges,
+  WorktreeDoctorReport,
+  WorktreeActionRequest,
   WorktreeBoundary,
   WorktreeId,
   WorktreeManager,
   WorktreeManagerOptions,
+  PullRequestEnsureRequest,
+  PullRequestEnsureResult,
+  PullRequestPublisher,
+  WorktreeLease,
+  WorktreeOwner,
+  WorktreeReview,
   WorktreeRecoveryReport,
   WorktreeState,
   WorktreeView,
+  ValidationCommand,
+  ValidationCommandResult,
+  ValidationResult,
+  ValidationSummary,
 } from './types.js'
 
 /**

@@ -8,7 +8,7 @@ import type {
 } from '@deepseek-ai/dsh-subagent'
 import type { InProcessRunOptions } from '@deepseek-ai/dsh-subagent-in-process-driver'
 import { WorktreeError } from './errors.js'
-import type { LifetimePolicy, SourcePolicy, WorktreeManager, WorktreeView } from './types.js'
+import type { LifetimePolicy, SourcePolicy, WorktreeLease, WorktreeManager, WorktreeView } from './types.js'
 
 export type InProcessRunStarter = (
   request: ResolvedSubagentStartRequest,
@@ -50,11 +50,17 @@ export class WorktreeSubagentProvider implements SubagentProvider {
   ) {}
 
   async start(request: ResolvedSubagentStartRequest): Promise<SubagentRun> {
-    const worktree = await this.createFor(parentRepository(request))
+    const { worktree, lease } = await this.createFor(parentRepository(request), {
+      kind: 'subagent-run',
+      id: randomUUID(),
+      ...(request.label === undefined ? {} : { label: request.label }),
+      parentSessionId: String(request.parent.session.id),
+    })
     let base: SubagentRun
     try {
       base = await this.startRun(request, { cwd: worktree.path })
     } catch (error) {
+      await this.manager.releaseLease(worktree.id, lease.id)
       await this.concludeAfterQuiescence(worktree)
       throw error
     }
@@ -69,6 +75,7 @@ export class WorktreeSubagentProvider implements SubagentProvider {
           // Never inspect or delete files until the child lifecycle owner has
           // reached quiescence.
           await base.dispose()
+          await this.manager.releaseLease(worktree.id, lease.id)
           await this.concludeAfterQuiescence(worktree)
         })()
         return disposal
@@ -78,19 +85,33 @@ export class WorktreeSubagentProvider implements SubagentProvider {
 
   async prepareContinuable(request: ContinuableCreateRequest): Promise<ContinuableCreateSpec> {
     if (request.signal.aborted) throw new WorktreeError('continuable worktree preparation was aborted', 'WORKTREE_PREPARATION_ABORTED')
-    const worktree = await this.createFor(parentRepository(request))
+    const { worktree } = await this.createFor(parentRepository(request), {
+      kind: 'continuable-child',
+      id: String(request.sessionId),
+      parentSessionId: String(request.parent.session.id),
+    })
     // DSH persists this cwd in the child's session header. The worktree remains
     // manager-owned until an explicit lifecycle action because the provider is
     // intentionally not part of later continuation teardown.
     return { cwd: worktree.path }
   }
 
-  private createFor(repository: string): Promise<WorktreeView> {
-    return this.manager.create({
+  private async createFor(
+    repository: string,
+    owner: Parameters<WorktreeManager['acquireLease']>[1],
+  ): Promise<{ readonly worktree: WorktreeView; readonly lease: WorktreeLease }> {
+    const worktree = await this.manager.create({
       repository,
       source: this.policy.source,
       lifetime: this.policy.lifetime,
     })
+    try {
+      const lease = await this.manager.acquireLease(worktree.id, owner)
+      return { worktree, lease }
+    } catch (error) {
+      await this.concludeAfterQuiescence(worktree)
+      throw error
+    }
   }
 
   private async concludeAfterQuiescence(worktree: WorktreeView): Promise<void> {
@@ -102,3 +123,4 @@ export class WorktreeSubagentProvider implements SubagentProvider {
     await this.manager.conclude({ id: current.id, action: 'remove-clean' })
   }
 }
+import { randomUUID } from 'node:crypto'
