@@ -1,7 +1,7 @@
-import type { ContinuableCreateRequest, ContinuableCreateSpec, ResolvedSubagentStartRequest, SubagentCapabilities, SubagentProvider, SubagentRun } from '@deepseek-ai/dsh-subagent';
-import type { InProcessRunOptions } from '@deepseek-ai/dsh-subagent-in-process-driver';
+import type { ResolvedSubagentStartRequest, SubagentCapabilities, SubagentProvider, SubagentRun } from '@deepseek-ai/dsh-subagent';
+import type { WorktreeInProcessRunOptions } from './in-process-runner.js';
 import type { LifetimePolicy, SourcePolicy, WorktreeManager } from './types.js';
-export type InProcessRunStarter = (request: ResolvedSubagentStartRequest, options: InProcessRunOptions) => Promise<SubagentRun>;
+export type InProcessRunStarter = (request: ResolvedSubagentStartRequest, options: WorktreeInProcessRunOptions) => Promise<SubagentRun>;
 export interface WorktreeProviderPolicy {
     readonly source: SourcePolicy;
     readonly lifetime: LifetimePolicy;
@@ -20,7 +20,6 @@ export declare class WorktreeSubagentProvider implements SubagentProvider {
     readonly inheritsParentContext = false;
     constructor(name: string, manager: WorktreeManager, startRun: InProcessRunStarter, policy: WorktreeProviderPolicy);
     start(request: ResolvedSubagentStartRequest): Promise<SubagentRun>;
-    prepareContinuable(request: ContinuableCreateRequest): Promise<ContinuableCreateSpec>;
     private createFor;
     private concludeAfterQuiescence;
 }

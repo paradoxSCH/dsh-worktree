@@ -2,7 +2,7 @@ import { homedir } from 'node:os'
 import { isAbsolute, join, resolve } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
-import { startInProcessRun } from '@deepseek-ai/dsh-subagent-in-process-driver'
+import { startWorktreeInProcessRun } from './in-process-runner.js'
 import { WorktreeError } from './errors.js'
 import { LocalWorktreeManager } from './manager.js'
 import { WorktreeSubagentProvider } from './provider.js'
@@ -92,7 +92,7 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
   ctx.subagents.registerProvider(new WorktreeSubagentProvider(
     config.providerName,
     manager,
-    startInProcessRun,
+    startWorktreeInProcessRun,
     { source: sourcePolicy(config), lifetime: config.lifetime },
   ))
 }

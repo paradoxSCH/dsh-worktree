@@ -3,7 +3,7 @@
 为 DeepSeek Harness（DSH）子代理提供隔离的 Git worktree。并行任务在独立 checkout 中工作，不直接修改主工作区；任务结束后可以审阅、验证、提交、交付、归档或恢复结果。
 
 > [!IMPORTANT]
-> 当前 alpha 版本要求 DSH `0.1.0-rc.7` 或更高版本。已发布的 DSH `0.1.0-rc.6` 缺少插件所需的 child working-directory 接口，无法安全使用本插件。
+> 当前 alpha 版本支持已发布的 DSH `0.1.0-rc.6` 及后续 `0.1.x` 版本。
 
 ## 安装
 
@@ -31,6 +31,8 @@ dsh --profile web --dump-config
 ## 第一次使用
 
 让 Agent 使用 `subagent_worktree` 委派任务，子代理会自动进入独立 worktree。Web profile 的侧边栏底部会出现 **Worktrees**，可以在其中查看状态、diff 和可用操作。
+
+委派默认等待子代理返回结果；需要并行执行时可以设置 `run_in_background: true`，之后通过 DSH 的 `job_output` 查看结果、通过 `job_kill` 停止任务。每次委派都是独立子任务。
 
 也可以使用 `/worktree` 命令手动管理：
 

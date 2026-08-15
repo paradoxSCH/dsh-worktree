@@ -6,7 +6,7 @@
       config:
         provider: worktree
         toolName: subagent_worktree
-        backgroundMode: continuable
+        backgroundMode: one-shot
     - id: dsh-worktree-tools
       name: "@paradoxsch/dsh-worktree/tools"
     - id: dsh-worktree-commands
