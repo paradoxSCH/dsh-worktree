@@ -26,6 +26,7 @@ describe('dsh-worktree Cordis plugin', () => {
       journalPath: join(root, 'operations.jsonl'),
       sourceMode: 'working-state',
       lifetime: 'managed',
+      pullRequestProvider: 'disabled',
     })
 
     expect(ctx.worktrees).toBeDefined()

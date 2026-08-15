@@ -11,19 +11,23 @@ function view(overrides: Partial<WorktreeView> = {}): WorktreeView {
     repository: 'C:\\repo',
     baseCommit: 'a'.repeat(40),
     headCommit: 'a'.repeat(40),
+    branch: null,
     lifetime: 'managed',
     changes: { dirty: false, stagedFileCount: 0, unstagedFileCount: 0, untrackedFileCount: 0, newCommitCount: 0 },
     changedFromInitial: false,
     changeToken: 'token',
     createdAt: '2026-08-14T00:00:00.000Z',
     updatedAt: '2026-08-14T00:00:00.000Z',
+    activeLeases: [],
+    lastValidation: undefined,
+    lastDelivery: undefined,
     ...overrides,
   }
 }
 
 function request(cwd = 'C:\\repo'): ResolvedSubagentStartRequest {
   return {
-    parent: { session: { header: { cwd } } },
+    parent: { session: { id: 'parent', header: { cwd } } },
     signal: new AbortController().signal,
     prompt: [],
     descriptor: { label: 'test' },
@@ -32,15 +36,27 @@ function request(cwd = 'C:\\repo'): ResolvedSubagentStartRequest {
 
 function managerFixture() {
   const created = view()
+  const lease = {
+    id: 'lease-1',
+    worktreeId: created.id,
+    owner: { kind: 'subagent-run' as const, id: 'owner-1' },
+    acquiredAt: '2026-08-14T00:00:00.000Z',
+  }
   const manager = {
     create: vi.fn(async () => created),
     inspect: vi.fn(async () => created),
+    acquireLease: vi.fn(async () => lease),
+    releaseLease: vi.fn(async () => undefined),
+    act: vi.fn(async () => created),
+    review: vi.fn(),
+    validate: vi.fn(),
     conclude: vi.fn(async () => view({ state: 'removed' })),
     list: vi.fn(async () => [created]),
-    recover: vi.fn(async () => ({ recovered: [], manual: [] })),
+    doctor: vi.fn(),
+    recover: vi.fn(async () => ({ recovered: [], healthy: [], manual: [], orphaned: [] })),
     close: vi.fn(async () => undefined),
   } satisfies WorktreeManager
-  return { created, manager }
+  return { created, lease, manager }
 }
 
 describe('WorktreeSubagentProvider', () => {
@@ -64,6 +80,7 @@ describe('WorktreeSubagentProvider', () => {
 
     await Promise.all([run.dispose(), run.dispose()])
     expect(baseDispose).toHaveBeenCalledTimes(1)
+    expect(manager.releaseLease).toHaveBeenCalledTimes(1)
     expect(manager.conclude).toHaveBeenCalledTimes(1)
     expect(manager.conclude).toHaveBeenCalledWith({ id: created.id, action: 'remove-clean' })
   })

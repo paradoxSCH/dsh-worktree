@@ -3,3 +3,4 @@ lib/**/*.map
 coverage/
 *.tgz
 .vitest/
+.playwright-cli/

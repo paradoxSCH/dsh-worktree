@@ -17,15 +17,17 @@ export interface Config {
     sourceRemote?: string;
     sourceRef?: string;
     lifetime: LifetimePolicy;
+    pullRequestProvider: 'github-cli' | 'disabled';
 }
 export declare const Config: z<Config>;
 /** Register the shared manager and DSH subagent provider. */
 export declare function apply(ctx: Context, config: Config): Promise<void>;
-export { WorktreeChangedError, WorktreeChangedSinceInspectionError, WorktreeError, WorktreeNotFoundError, } from './errors.js';
+export { WorktreeChangedError, WorktreeChangedSinceInspectionError, WorktreeError, WorktreeInUseError, WorktreeNotFoundError, } from './errors.js';
 export { LocalWorktreeManager } from './manager.js';
 export { WorktreeSubagentProvider } from './provider.js';
+export { GitHubCliPullRequestPublisher } from './forge.js';
 export type { InProcessRunStarter, WorktreeProviderPolicy } from './provider.js';
-export type { ConcludeWorktreeRequest, CreateWorktreeRequest, LifetimePolicy, SourcePolicy, WorktreeChanges, WorktreeBoundary, WorktreeId, WorktreeManager, WorktreeManagerOptions, WorktreeRecoveryReport, WorktreeState, WorktreeView, } from './types.js';
+export type { ConcludeWorktreeRequest, CreateWorktreeRequest, LifetimePolicy, SourcePolicy, WorktreeChanges, WorktreeDoctorReport, WorktreeActionRequest, WorktreeBoundary, WorktreeId, WorktreeManager, WorktreeManagerOptions, PullRequestEnsureRequest, PullRequestEnsureResult, PullRequestPublisher, WorktreeLease, WorktreeOwner, WorktreeReview, WorktreeRecoveryReport, WorktreeState, WorktreeView, ValidationCommand, ValidationCommandResult, ValidationResult, ValidationSummary, } from './types.js';
 /**
  * Create the durable local worktree module used by DSH plugins and standalone callers.
  * @param options - Managed filesystem and journal locations.

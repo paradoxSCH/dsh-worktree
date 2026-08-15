@@ -32,3 +32,9 @@ export class WorktreeChangedSinceInspectionError extends WorktreeError {
   }
 }
 
+export class WorktreeInUseError extends WorktreeError {
+  constructor(id: string, leaseCount: number) {
+    super(`worktree ${id} still has ${leaseCount} active owner lease(s)`, 'WORKTREE_IN_USE')
+    this.name = 'WorktreeInUseError'
+  }
+}
