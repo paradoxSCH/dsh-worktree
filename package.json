@@ -1,6 +1,6 @@
 {
   "name": "@paradoxsch/dsh-worktree",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "Durable Git worktree isolation and delivery for DeepSeek Harness subagents",
   "license": "MIT",
   "repository": {
@@ -80,9 +80,11 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.0",
-    "@deepseek-ai/dsh-subagent": ">=0.1.0-rc.7 <0.2.0",
-    "@deepseek-ai/dsh-subagent-in-process-driver": ">=0.1.0-rc.7 <0.2.0",
-    "@deepseek-ai/dsh-tool-subagent": ">=0.1.0-rc.7 <0.2.0",
+    "@deepseek-ai/dsh-agent": ">=0.1.0-rc.6 <0.2.0",
+    "@deepseek-ai/dsh-llm": ">=0.1.0-rc.6 <0.2.0",
+    "@deepseek-ai/dsh-session": ">=0.1.0-rc.6 <0.2.0",
+    "@deepseek-ai/dsh-subagent": ">=0.1.0-rc.6 <0.2.0",
+    "@deepseek-ai/dsh-tool-subagent": ">=0.1.0-rc.6 <0.2.0",
     "@deepseek-ai/dsh-tools": ">=0.1.0-rc.6 <0.2.0",
     "@deepseek-ai/dsh-commands": ">=0.1.0-rc.6 <0.2.0",
     "@deepseek-ai/dsh-host-webserver": ">=0.1.0-rc.6 <0.2.0",
@@ -95,6 +97,14 @@
     "@deepseek-ai/schemastery": "^3.18.1"
   },
   "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true },
+    "@deepseek-ai/dsh-agent": { "optional": true },
+    "@deepseek-ai/dsh-commands": { "optional": true },
+    "@deepseek-ai/dsh-llm": { "optional": true },
+    "@deepseek-ai/dsh-session": { "optional": true },
+    "@deepseek-ai/dsh-subagent": { "optional": true },
+    "@deepseek-ai/dsh-tool-subagent": { "optional": true },
+    "@deepseek-ai/dsh-tools": { "optional": true },
     "@deepseek-ai/dsh-host-webserver": { "optional": true },
     "@deepseek-ai/dsh-client-runtime": { "optional": true },
     "@deepseek-ai/dsh-client-ui-sidebar": { "optional": true },
@@ -103,8 +113,12 @@
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh-agent": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-agent-loop": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-agent-loop-testkit": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-llm": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-session": "0.1.0-rc.6",
     "@deepseek-ai/dsh-subagent": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-subagent-in-process-driver": "0.1.0-rc.6",
     "@deepseek-ai/dsh-tool-subagent": "0.1.0-rc.6",
     "@deepseek-ai/dsh-commands": "0.1.0-rc.6",
     "@deepseek-ai/dsh-system-prompt": "0.1.0-rc.6",

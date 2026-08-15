@@ -1,5 +1,8 @@
 # 现代 Coding Agent 的 Worktree 产品行为
 
+> [!NOTE]
+> 维护者研究资料，用于解释产品取舍，不是 dsh-worktree 的用户手册或当前能力清单。用户安装与操作请参阅 [README](./README.md)。
+
 > 核验日期：2026-08-14。只采用厂商官方文档、官方源码仓库或厂商安全公告。各产品仍在快速迭代，尤其 VS Code Agents Window、GitHub Copilot App 和 cloud agent 的 preview 功能；本文记录的是核验日可见行为，不把未文档化的内部实现当成承诺。
 
 ## 结论先行

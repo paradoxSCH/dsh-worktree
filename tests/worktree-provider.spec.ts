@@ -1,4 +1,4 @@
-import type { ResolvedSubagentStartRequest, SubagentRun } from '@deepseek-ai/dsh-subagent'
+import type { ResolvedSubagentStartRequest, SubagentProvider, SubagentRun } from '@deepseek-ai/dsh-subagent'
 import { describe, expect, it, vi } from 'vitest'
 import { WorktreeSubagentProvider } from '../src/provider.js'
 import type { WorktreeManager, WorktreeView } from '../src/types.js'
@@ -98,15 +98,12 @@ describe('WorktreeSubagentProvider', () => {
     expect(manager.conclude).toHaveBeenCalledWith({ id: expect.any(String), action: 'retain' })
   })
 
-  it('returns a durable cwd for continuable children', async () => {
-    const { created, manager } = managerFixture()
+  it('does not advertise unsafe continuation support on DSH rc.6', () => {
+    const { manager } = managerFixture()
     const provider = new WorktreeSubagentProvider('worktree', manager, vi.fn(), {
       source: { kind: 'head' }, lifetime: 'managed',
     })
 
-    await expect(provider.prepareContinuable!({
-      sessionId: 'child', parent: request().parent, signal: new AbortController().signal,
-    } as never)).resolves.toEqual({ cwd: created.path })
-    expect(manager.conclude).not.toHaveBeenCalled()
+    expect((provider as SubagentProvider).prepareContinuable).toBeUndefined()
   })
 })

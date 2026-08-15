@@ -1,116 +1,142 @@
 # dsh-worktree
 
-面向 DeepSeek Harness 的独立、可全局安装的 Git worktree 产品。每个 one-shot 或 continuable 子代理在受管理的 checkout 中工作；主工作区不会被并发任务直接修改。任务结束后可在同一套持久化状态上审阅、验证、提交、交付、归档或恢复。
+为 DeepSeek Harness（DSH）子代理提供隔离的 Git worktree。并行任务在独立 checkout 中工作，不直接修改主工作区；任务结束后可以审阅、验证、提交、交付、归档或恢复结果。
 
-本项目是独立发布仓库，不属于 Harness monorepo。DSH 上游只提供通用 child `cwd` seam；Git snapshot、锁、journal、恢复、交付策略、工具、命令和 Web dashboard 全部由本仓库维护。
+> [!IMPORTANT]
+> 当前 alpha 版本支持已发布的 DSH `0.1.0-rc.6` 及后续 `0.1.x` 版本。
 
-## 产品能力
+## 安装
 
-- `fresh`、`head`、`working-state` 三种 source mode；
-- staged、unstaged、untracked 状态无损重建；ignored 内容只按 `.worktreeinclude`/配置 allowlist 带入，敏感文件需要显式放行；
-- managed detached HEAD、ephemeral、permanent 三种 lifetime；
-- `subagent_worktree`：foreground、background、continuable 共用的隔离子代理入口；
-- durable JSONL journal、跨进程锁、每仓库 topology lock、多 owner lease、启动 reconciliation；
-- 每个外部副作用前先写 plan，并覆盖 create、commit、branch、handoff、merge、push、PR、archive、restore、discard 的崩溃恢复；
-- review diff、验证命令、change token、Git identity 与路径复核；
-- `worktree_*` 模型工具、`/worktree` 命令和 loopback-only Web dashboard；
-- dashboard 展示状态、owner、diff、doctor，并提供 commit/branch/handoff/merge/push/PR/archive/restore/discard；
-- GitHub CLI PR provider；没有 `gh` 或凭据时 branch、handoff、archive 等本地能力仍可用；
-- Windows、Linux、macOS CI，真实 Git 仓库与 bare remote 测试。
+插件安装到全局 DSH profile，不会修改业务项目的 `package.json`。
 
-当前版本仍标记为 alpha，原因是所需 child `cwd` seam 尚未进入正式 DSH release，而不是因为插件只实现了 MVP。
-
-## DSH 兼容性
-
-插件要求 provider-prepared child `cwd` 接口。对应实现提交是 [`0647d61abf`](https://github.com/paradoxSCH/deepseek-harness/commit/0647d61abf78977cbad4f691d9e7d95763a0fd46)，分支为 [`feat/child-cwd-seam`](https://github.com/paradoxSCH/deepseek-harness/tree/feat/child-cwd-seam)。
-
-已发布的 DSH `0.1.0-rc.6` 不包含该接口，所以 peer range 从 `rc.7` 开始。这样安装器会明确报告不兼容，不会出现“插件装上了但 child 仍写主 checkout”的静默失败。
-
-## 全局安装
-
-插件安装到 DSH profile，不写入任何被处理项目的 `package.json`。
-
-从独立 GitHub 仓库安装：
+Web profile：
 
 ```sh
-dsh plugin --profile web add github:paradoxSCH/dsh-worktree
-dsh plugin --profile headless add github:paradoxSCH/dsh-worktree
+dsh plugin --profile web add @paradoxsch/dsh-worktree@alpha
 ```
 
-生产环境建议固定 release tag 或 commit：
+Headless profile：
 
 ```sh
-dsh plugin --profile web add github:paradoxSCH/dsh-worktree#<tag-or-commit>
+dsh plugin --profile headless add @paradoxsch/dsh-worktree@alpha
 ```
 
-npm package 发布后：
+检查是否安装成功：
 
 ```sh
-dsh plugin --profile web add @paradoxsch/dsh-worktree
-```
-
-验证全局 Bundle：
-
-```sh
-dsh --profile web --dump-config
 dsh plugin --profile web why @paradoxsch/dsh-worktree
+dsh --profile web --dump-config
 ```
 
-卸载只移除 Bundle，不删除 retained/archived 成果：
+## 第一次使用
 
-```sh
-dsh plugin --profile web remove @paradoxsch/dsh-worktree
-```
+让 Agent 使用 `subagent_worktree` 委派任务，子代理会自动进入独立 worktree。Web profile 的侧边栏底部会出现 **Worktrees**，可以在其中查看状态、diff 和可用操作。
 
-仓库提交预构建 `lib/`，从 GitHub 安装不需要执行 `prepare` 构建脚本。
+委派默认等待子代理返回结果；需要并行执行时可以设置 `run_in_background: true`，之后通过 DSH 的 `job_output` 查看结果、通过 `job_kill` 停止任务。每次委派都是独立子任务。
 
-## 使用
-
-委派隔离任务时使用 `subagent_worktree`。管理工具包括：
-
-- `worktree_create`、`worktree_list`、`worktree_inspect`；
-- `worktree_review`、`worktree_validate`；
-- `worktree_act`：commit、branch、handoff、merge、push、PR、archive、restore、discard；
-- `worktree_recover`、`worktree_doctor`。
-
-人工命令统一从 `/worktree` 进入，例如：
+也可以使用 `/worktree` 命令手动管理：
 
 ```text
 /worktree list
+/worktree create working-state managed
 /worktree review <id>
-/worktree commit <id> <message>
-/worktree branch <id> <branch>
+/worktree validate <id>
 /worktree doctor
 ```
 
-Web profile 的 sidebar footer 会出现 `Worktrees`，打开后可查看并操作同一份 durable projection。
+不带子命令的 `/worktree` 等同于 `/worktree list`。`<id>` 来自 list/create 的返回结果。
 
-## 默认与安全边界
+## 选择任务起点
 
-- source：`working-state`；lifetime：`managed`；provider：`worktree`；
-- durable data：`$DSH_HOME/plugins/dsh-worktree`；
-- managed checkout 默认 detached HEAD 并保持 Git lock；
-- dirty worktree 不静默删除；discard 需要最新 `changeToken`、无 active owner 和明确确认；
-- ignored 文件默认不复制；`.env`、密钥、证书等即使命中 allowlist 也需要额外允许；
-- 模型工具不接受原始 Git flags；handoff/merge 目标必须是同仓库、identity 通过且满足 clean/base 条件；
-- dashboard 的 host API 只接受 loopback、same-origin 请求；
-- Git 子进程清除 `GIT_DIR`、`GIT_WORK_TREE`、`GIT_INDEX_FILE` 等重定向环境变量；
-- worktree 是写冲突隔离，不替代 DSH sandbox。`workspace-write` 会以 child session 的 worktree cwd 作为可写根。
+| 模式 | 子代理从哪里开始 | 适合场景 |
+| --- | --- | --- |
+| `working-state` | 当前 HEAD，加上 staged、unstaged 和非 ignored 的 untracked 变更 | 继续当前正在进行的工作；默认值 |
+| `head` | 当前已提交的 HEAD | 不希望继承未提交修改 |
+| `fresh` | 远端最新基线 | 与本地当前分支无关的独立任务 |
 
-## 开发与验证
+ignored 文件默认不会复制。确实需要的普通 ignored 文件可以写入仓库根目录的 `.worktreeinclude`；`.env`、密钥和证书等敏感内容即使列在其中也不会复制，请通过 DSH credentials 或运行环境提供。
 
-```sh
-pnpm install
-pnpm run check
-pnpm run pack:check
+## 选择保留方式
+
+| 模式 | 任务结束后的行为 |
+| --- | --- |
+| `ephemeral` | 用于一次性任务；clean checkout 自动移除，有修改时仍会保留 |
+| `managed` | 默认值；clean checkout 可自动移除，有修改的结果保留供审阅和交付 |
+| `permanent` | 长期保留，直到用户明确处理 |
+
+managed worktree 默认处于 detached HEAD。需要推送或创建 Pull Request 时，先使用 `branch` 创建分支。
+
+## 审阅和交付
+
+| 操作 | 结果 |
+| --- | --- |
+| `review` | 查看相对任务基线的 diff 和 untracked 文件，不修改仓库 |
+| `validate` | 在 worktree 中运行管理员配置的验证命令 |
+| `commit` | 提交 worktree 当前修改 |
+| `branch` | 为 detached worktree 创建分支 |
+| `handoff` | 将 commits、staged、unstaged 和 untracked 状态交付到当前会话 checkout |
+| `merge` | 将已提交结果以 non-fast-forward merge 合入当前会话的 clean 分支 |
+| `push` | 将当前分支非强制推送到 `origin` |
+| `pr` | 推送当前分支并通过 GitHub CLI 创建或复用 Pull Request |
+| `archive` | 保存可恢复结果并释放 checkout 占用的磁盘空间 |
+| `restore` | 从 archive 恢复 worktree |
+| `discard` | 永久删除未交付结果，需要明确确认 |
+
+常用命令：
+
+```text
+/worktree commit <id> <message>
+/worktree branch <id> <branch-name>
+/worktree handoff <id>
+/worktree merge <id>
+/worktree push <id>
+/worktree pr <id> <title>
+/worktree archive <id>
+/worktree restore <id>
+/worktree discard <id> confirm
 ```
 
-主要文档：
+`handoff` 和 `merge` 的目标是运行命令时当前 DSH 会话的 checkout。目标不属于同一仓库、存在未提交修改或不满足安全条件时，操作会停止并报告原因。
 
-- [完整产品规格](./PRODUCT_SPEC.md)
-- [技术设计](./DESIGN.md)
-- [其他 Agent 的 worktree 行为研究](./OTHER_AGENT_WORKTREE_RESEARCH.md)
-- [长时间运行 Agent 的耐久性原则](./PRODUCTION_LESSONS.md)
+创建 Pull Request 需要已登录的 GitHub CLI：
+
+```sh
+gh auth status
+```
+
+没有 `gh` 不影响本地创建、审阅、commit、branch、handoff、merge、archive 和 restore。
+
+## 安全与恢复
+
+- 有修改的 worktree 不会被自动丢弃。
+- 删除、合并、提交、推送和 Pull Request 等操作会在执行前重新检查 worktree 状态。
+- ignored 文件和常见敏感文件默认不进入新 worktree。
+- `push` 不使用 force；`merge` 要求目标 checkout clean。
+- worktree 解决并行写冲突，但不替代 DSH sandbox 或审批策略。
+- 默认持久化数据位于 `$DSH_HOME/plugins/dsh-worktree`。
+
+诊断环境和记录：
+
+```text
+/worktree doctor
+```
+
+进程崩溃或操作中断后重新核对 Git 与持久化状态：
+
+```text
+/worktree recover
+```
+
+如果 recover 返回 `manual` 项目，请在继续 merge、discard 或删除磁盘目录前处理报告中的 identity/path 问题。
+
+## 卸载
+
+```sh
+dsh plugin --profile web remove @paradoxsch/dsh-worktree
+dsh plugin --profile headless remove @paradoxsch/dsh-worktree
+```
+
+卸载 Bundle 不会删除 retained 或 archived 结果。确认不再需要这些结果后，再单独处理 `$DSH_HOME/plugins/dsh-worktree` 中的数据。
 
 ## License
 
