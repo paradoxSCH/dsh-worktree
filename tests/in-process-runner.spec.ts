@@ -1,4 +1,5 @@
 import { Context } from '@deepseek-ai/cordis'
+import { resolve } from 'node:path'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
 import type { Agent } from '@deepseek-ai/dsh-agent'
@@ -59,8 +60,8 @@ describe('rc.6 worktree in-process runner', () => {
     await ctx.plugin(SubagentRuntime)
     ctx.llm.registerAdapter(['mock'], new ScriptedAdapter(textResponse('done')))
 
-    const parentCwd = 'C:\\repositories\\main'
-    const worktreeCwd = 'C:\\managed\\worktree-42'
+    const parentCwd = resolve('fixtures', 'parent')
+    const worktreeCwd = resolve('fixtures', 'worktree-42')
     const parent = ctx.agentLoop.create(
       SessionId('parent'),
       { provider: 'mock', model: 'mock' },
