@@ -64,7 +64,9 @@ jobs:
           pnpm run build
       - name: Install DSH source dependencies
         working-directory: deepseek-harness
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build:lib:host
       - name: Install Bundle into an isolated global profile
         working-directory: deepseek-harness
         env:

@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -16,10 +16,13 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
 
 async function repositoryFixture(): Promise<{ root: string; repository: string; managedRoot: string; journalPath: string }> {
   const root = await mkdtemp(join(tmpdir(), 'dsh-worktree-test-'))
-  const repository = join(root, 'repository')
+  const requestedRepository = join(root, 'repository')
   const managedRoot = join(root, 'managed')
   const journalPath = join(root, 'state', 'operations.jsonl')
-  await execFileAsync('git', ['init', repository])
+  await execFileAsync('git', ['init', requestedRepository])
+  // Git reports canonical paths. Resolve the fixture too so assertions remain
+  // stable across macOS /var -> /private/var and Windows 8.3 path aliases.
+  const repository = await realpath(requestedRepository)
   await git(repository, 'config', 'core.autocrlf', 'false')
   await git(repository, 'config', 'user.name', 'dsh-worktree test')
   await git(repository, 'config', 'user.email', 'dsh-worktree@example.invalid')
@@ -61,9 +64,9 @@ describe('WorktreeManager', () => {
     const firstCreate = manager.create({ repository: first.repository, source: { kind: 'head' }, lifetime: 'managed' })
     await firstReachedBoundary
     const secondCreated = await manager.create({ repository: second.repository, source: { kind: 'head' }, lifetime: 'managed' })
-    expect(secondCreated.repository).toBe(second.repository)
     releaseFirst()
     await firstCreate
+    expect(secondCreated.repository).toBe(second.repository)
   }, 15_000)
 
   it('creates a durable isolated worktree from committed HEAD and removes it when clean', async () => {
