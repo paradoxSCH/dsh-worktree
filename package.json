@@ -1,6 +1,6 @@
 {
   "name": "@paradoxsch/dsh-worktree",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "Durable Git worktree isolation and delivery for DeepSeek Harness subagents",
   "license": "MIT",
   "repository": {
