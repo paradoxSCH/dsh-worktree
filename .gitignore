@@ -4,3 +4,6 @@ coverage/
 *.tgz
 .vitest/
 .playwright-cli/
+tests/browser/dist/
+test-results/
+playwright-report/

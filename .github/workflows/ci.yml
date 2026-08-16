@@ -34,19 +34,13 @@ jobs:
       - run: pnpm run pack:check
 
   dsh-composition:
-    name: DSH global Bundle composition
+    name: Official DSH rc.6 / packed global Bundle
     runs-on: ubuntu-latest
     steps:
       - name: Checkout plugin
         uses: actions/checkout@v4
         with:
           path: dsh-worktree
-      - name: Checkout DSH child-cwd seam
-        uses: actions/checkout@v4
-        with:
-          repository: paradoxSCH/deepseek-harness
-          ref: feat/child-cwd-seam
-          path: deepseek-harness
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
@@ -54,35 +48,63 @@ jobs:
         with:
           node-version: 22.20.0
           cache: pnpm
-          cache-dependency-path: |
-            dsh-worktree/pnpm-lock.yaml
-            deepseek-harness/pnpm-lock.yaml
-      - name: Build plugin distribution
+          cache-dependency-path: dsh-worktree/pnpm-lock.yaml
+      - name: Build and pack plugin distribution
         working-directory: dsh-worktree
+        shell: bash
         run: |
           pnpm install --frozen-lockfile
           pnpm run build
-      - name: Install DSH source dependencies
-        working-directory: deepseek-harness
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm run build:lib:host
+          mkdir -p "$RUNNER_TEMP/dsh-worktree-package"
+          pnpm pack --pack-destination "$RUNNER_TEMP/dsh-worktree-package"
+      - name: Install the official current DSH release globally
+        run: npm install --global @deepseek-ai/dsh@0.1.0-rc.6
       - name: Install Bundle into an isolated global profile
-        working-directory: deepseek-harness
         env:
           DSH_HOME: ${{ runner.temp }}/dsh-worktree-home
-        run: pnpm dsh plugin --profile headless add "$GITHUB_WORKSPACE/dsh-worktree"
+        shell: bash
+        run: dsh plugin --profile headless add "$(find "$RUNNER_TEMP/dsh-worktree-package" -maxdepth 1 -name '*.tgz' -print -quit)"
       - name: Mount the real profile
-        working-directory: deepseek-harness
         env:
           DSH_HOME: ${{ runner.temp }}/dsh-worktree-home
         shell: bash
         run: |
           set +e
-          output=$(pnpm dsh --profile headless "composition smoke" 2>&1)
+          output=$(dsh --profile headless "composition smoke" 2>&1)
           status=$?
           set -e
           printf '%s\n' "$output"
           test "$status" -ne 0
           grep -q 'MISSING_CREDENTIAL' <<<"$output"
           ! grep -q 'plugin tree failed to load' <<<"$output"
+
+  coverage:
+    name: Production source coverage gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run test:coverage
+
+  browser-e2e:
+    name: Chromium dashboard E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run test:e2e:web
